@@ -14,6 +14,8 @@
  * limitations under the License.
  *****************************************************************************/
 
+/*有界无锁线程安全队列*/
+
 #ifndef IROS_BASE_BOUNDED_QUEUE_H_
 #define IROS_BASE_BOUNDED_QUEUE_H_
 
@@ -26,8 +28,8 @@
 #include <cstdlib>
 #include <memory>
 #include <utility>
-#include "iros/base/macros.h"
-#include "iros/base/wait_strategy.h"
+#include "macros.h"
+#include "wait_strategy.h"
 
 namespace idrive {
 namespace iros {
@@ -94,6 +96,7 @@ inline bool BoundedQueue<T>::Init(uint64_t size) {
 template <typename T>
 bool BoundedQueue<T>::Init(uint64_t size, WaitStrategy* strategy) {
   // Head and tail each occupy a space
+  // pool_size_在size的基础上加2的原因
   pool_size_ = size + 2;
   pool_ = reinterpret_cast<T*>(std::calloc(pool_size_, sizeof(T)));
   if (pool_ == nullptr) {
@@ -114,6 +117,7 @@ bool BoundedQueue<T>::Enqueue(const T& element) {
   do {
     new_tail = old_tail + 1;
     if (GetIndex(new_tail) == GetIndex(head_.load(std::memory_order_acquire))) {
+      //队列已满，入队失败，返回false
       return false;
     }
   } while (!tail_.compare_exchange_weak(old_tail, new_tail,
@@ -125,6 +129,7 @@ bool BoundedQueue<T>::Enqueue(const T& element) {
   } while (iros_unlikely(!commit_.compare_exchange_weak(
       old_commit, new_tail, std::memory_order_acq_rel,
       std::memory_order_relaxed)));
+  //唤醒一个等待的线程，告诉它队列中已经有新的元素可以被取出或处理了
   wait_strategy_->NotifyOne();
   return true;
 }
@@ -148,6 +153,7 @@ bool BoundedQueue<T>::Enqueue(T&& element) {
   } while (iros_unlikely(!commit_.compare_exchange_weak(
       old_commit, new_tail, std::memory_order_acq_rel,
       std::memory_order_relaxed)));
+  //唤醒一个等待的线程，告诉它队列中已经有新的元素可以被取出或处理了
   wait_strategy_->NotifyOne();
   return true;
 }
@@ -159,6 +165,7 @@ bool BoundedQueue<T>::Dequeue(T* element) {
   do {
     new_head = old_head + 1;
     if (new_head == commit_.load(std::memory_order_acquire)) {
+      //说明队列里没有数据，队列为空，返回false
       return false;
     }
     *element = pool_[GetIndex(new_head)];
