@@ -25,28 +25,27 @@ namespace idrive {
 namespace iros {
 namespace base {
 
-DEFINE_TYPE_TRAIT(HasLess, operator<)  // NOLINT
+DEFINE_TYPE_TRAIT(HasLess, operator<)   // NOLINT
 
-template <class Value, class End>
-typename std::enable_if<HasLess<Value>::value && HasLess<End>::value,
-                        bool>::type
-LessThan(const Value& val, const End& end) {
-  return val < end;
+template<class Value, class End>
+typename std::enable_if<HasLess<Value>::value && HasLess<End>::value, bool>::type
+LessThan(const Value& val, const End& end)
+{
+    return val < end;
 }
 
-template <class Value, class End>
-typename std::enable_if<!HasLess<Value>::value || !HasLess<End>::value,
-                        bool>::type
-LessThan(const Value& val, const End& end) {
-  return val != end;
+template<class Value, class End>
+typename std::enable_if<!HasLess<Value>::value || !HasLess<End>::value, bool>::type
+LessThan(const Value& val, const End& end)
+{
+    return val != end;
 }
 
-#define FOR_EACH(i, begin, end)           \
-  for (auto i = (true ? (begin) : (end)); \
-       idrive::iros::base::LessThan(i, (end)); ++i)
+#define FOR_EACH(i, begin, end) \
+    for (auto i = (true ? (begin) : (end)); idrive::iros::base::LessThan(i, (end)); ++i)
 
-}  // namespace base
-}  // namespace iros
-}  // namespace idrive
+}   // namespace base
+}   // namespace iros
+}   // namespace idrive
 
-#endif  // IROS_BASE_FOR_EACH_H_
+#endif   // IROS_BASE_FOR_EACH_H_

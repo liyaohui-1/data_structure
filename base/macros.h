@@ -21,66 +21,69 @@
 #include <new>
 
 #if __GNUC__ >= 3
-#define iros_likely(x) (__builtin_expect((x), 1))
-#define iros_unlikely(x) (__builtin_expect((x), 0))
+#    define iros_likely(x) (__builtin_expect((x), 1))
+#    define iros_unlikely(x) (__builtin_expect((x), 0))
 #else
-#define iros_likely(x) (x)
-#define iros_unlikely(x) (x)
+#    define iros_likely(x) (x)
+#    define iros_unlikely(x) (x)
 #endif
 
 #define CACHELINE_SIZE 64
 
-#define DEFINE_TYPE_TRAIT(name, func)                     \
-  template <typename T>                                   \
-  struct name {                                           \
-    template <typename Class>                             \
-    static constexpr bool Test(decltype(&Class::func)*) { \
-      return true;                                        \
-    }                                                     \
-    template <typename>                                   \
-    static constexpr bool Test(...) {                     \
-      return false;                                       \
-    }                                                     \
-                                                          \
-    static constexpr bool value = Test<T>(nullptr);       \
-  };                                                      \
-                                                          \
-  template <typename T>                                   \
-  constexpr bool name<T>::value;
+#define DEFINE_TYPE_TRAIT(name, func)                       \
+    template<typename T>                                    \
+    struct name                                             \
+    {                                                       \
+        template<typename Class>                            \
+        static constexpr bool Test(decltype(&Class::func)*) \
+        {                                                   \
+            return true;                                    \
+        }                                                   \
+        template<typename>                                  \
+        static constexpr bool Test(...)                     \
+        {                                                   \
+            return false;                                   \
+        }                                                   \
+                                                            \
+        static constexpr bool value = Test<T>(nullptr);     \
+    };                                                      \
+                                                            \
+    template<typename T>                                    \
+    constexpr bool name<T>::value;
 
 #ifdef _WIN32
-#include <intrin.h>
-inline void cpu_relax() {
-#if defined(__aarch64__)
+#    include <intrin.h>
+inline void cpu_relax()
+{
+#    if defined(__aarch64__)
     __yield();
-#else
+#    else
     _mm_pause();
-#endif
+#    endif
 }
 #else
-inline void cpu_relax() {
-#if defined(__aarch64__)
+inline void cpu_relax()
+{
+#    if defined(__aarch64__)
     asm volatile("yield" ::: "memory");
-#else
+#    else
     asm volatile("rep; nop" ::: "memory");
-#endif
+#    endif
 }
-#endif // _WIN32
+#endif   // _WIN32
 
-inline void* CheckedMalloc(size_t size) {
-  void* ptr = std::malloc(size);
-  if (!ptr) {
-    throw std::bad_alloc();
-  }
-  return ptr;
-}
-
-inline void* CheckedCalloc(size_t num, size_t size) {
-  void* ptr = std::calloc(num, size);
-  if (!ptr) {
-    throw std::bad_alloc();
-  }
-  return ptr;
+inline void* CheckedMalloc(size_t size)
+{
+    void* ptr = std::malloc(size);
+    if (!ptr) { throw std::bad_alloc(); }
+    return ptr;
 }
 
-#endif  // IROS_BASE_MACROS_H_
+inline void* CheckedCalloc(size_t num, size_t size)
+{
+    void* ptr = std::calloc(num, size);
+    if (!ptr) { throw std::bad_alloc(); }
+    return ptr;
+}
+
+#endif   // IROS_BASE_MACROS_H_
